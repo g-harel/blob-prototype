@@ -1,124 +1,132 @@
+////////////////////
+// DEFAULT VALUES //
+////////////////////
+
+const defaultComplexity = 0.1;
+const defaultContrast = 0.1;
+const defaultColor = [123, 220, 181];
+
 ////////////////////////////
 // this creates the BLOB  //
 ////////////////////////////
 
-var size = 375;
-var complexity = 0.1;
-var contrast = 0.1;
-var blobColor = "#7bdcb5";
+class Blob {
+    constructor(targetNode) {
+        // Set default blob settings.
+        this.target = targetNode;
+        this.complexity = defaultComplexity;
+        this.contrast = defaultContrast;
+        this.color = defaultColor.slice();
 
-var options = '{size: ' + size + ', complexity: ' + complexity + ', contrast: ' + contrast + ', color: "' + blobColor + '", stroke: { width: 0, color: "black",}, guides: false, seed: "1234",}';
+        // Initial render with default settings.
+        this.draw();
+    }
 
-var parsedOptions = eval("(" + options + ")");
-var svg = blobs(parsedOptions);   
+    draw() {
+        // Compute color value from RBG array.
+        let color = "#";
+        for (const channel of this.color) {
+            if (channel < 16) {
+                color += "0";
+            }
+            color += channel.toString(16);
+        }
 
-mood.innerHTML = svg;
+        // Replace contents of target with SVG output.
+        this.target.innerHTML = blobs({
+            size: 375,
+            complexity: this.complexity,
+            contrast: this.contrast,
+            color: color,
+            seed: "1234",
+        });
+    }
+
+    setComplexity(complexity) {
+        this.complexity = 0.01 + 0.99 * complexity;
+        this.draw();
+    }
+
+    setContrast(contrast) {
+        this.contrast = contrast;
+        this.draw();
+    }
+
+    setColorChannel(channel, value) {
+        this.color[channel] = value;
+        this.draw();
+    }
+}
+
+const moodBlob = new Blob(document.getElementById("mood"));
 
 //////////////////////////////////
 // this controls the BLOB COLOR //
 //////////////////////////////////
 
-var num2hex = rgb => {
-    return rgb
-      .map(color => {
-        let str = color.toString(16);
-
-        if (str.length === 1) {
-          str = '0' + str;
-        }
-
-        return str;
-      })
-      .join('');
-  };
-
-  var rgb = [123, 220, 181];
-  var colors = ['red', 'green', 'blue'];
-
-  var gColorPicker = d3
+const gColorPicker = d3
     .select('div#slider-color-picker')
     .append('svg')
     .attr('width', 375)
-    .attr('height', 200)
-    .append('g')
-    .attr('transform', 'translate(30,30)');
+    .attr('height', 200);
 
-  rgb.forEach((color, i) => {
-    var slider = d3
-      .sliderBottom()
-      .min(0)
-      .max(255)
-      .step(1)
-      .width(300)
-      .ticks(0)
-      .default(rgb[i])
-      .displayValue(false)
-      .fill(colors[i])
-      .handle(
-        d3
-            .symbol()
-            .type(d3.symbolCircle)
-            .size(200)()
-      )
-      .on('onchange', num => {
-        rgb[i] = num;
-        blobColor = `#${num2hex(rgb)}`;
-
-        options = '{size: ' + size + ', complexity: ' + complexity + ', contrast: ' + contrast + ', color: "' + blobColor + '", stroke: { width: 0, color: "black",}, guides: false, seed: "1234",}';
-
-        parsedOptions = eval("(" + options + ")");
-        svg = blobs(parsedOptions);   
-        
-        mood.innerHTML = svg;
-
-        console.log("color slider moved, color is now " + blobColor);
-      });
+['red', 'green', 'blue'].forEach((label, i) => {
+    const slider = d3
+        .sliderBottom()
+        .min(0)
+        .max(255)
+        .step(1)
+        .width(300)
+        .ticks(0)
+        .default(defaultColor[i])
+        .displayValue(false)
+        .fill(label)
+        .handle(
+            d3
+                .symbol()
+                .type(d3.symbolCircle)
+                .size(200)()
+        )
+        .on('onchange', (val) => {
+            moodBlob.setColorChannel(i, val);
+            console.log("color slider moved, color is now " + moodBlob.color);
+        });
 
     gColorPicker
-      .append('g')
-      .attr('transform', `translate(30,${60 * i})`)
-      .call(slider);
-  });
-  
+        .append('g')
+        .attr('transform', `translate(37.5, ${40 + 60 * i})`)
+        .call(slider);
+});
 
 //////////////////////////////////
 // this controls the COMPLEXITY //
 //////////////////////////////////
 
-var complexityData = [0, 1];
-var gComplexityPicker = d3
+const gComplexityPicker = d3
     .sliderBottom()
-    .min(d3.min(complexityData))
-    .max(d3.max(complexityData))
+    .min(0)
+    .max(1)
     .width(300)
     .ticks(0)
-    .default(0.1)
+    .default(defaultComplexity)
     .handle(
         d3
             .symbol()
             .type(d3.symbolCircle)
             .size(200)()
     )
-    .on('onchange', val => {
-        complexity = val;
-
-        options = '{size: ' + size + ', complexity: ' + complexity + ', contrast: ' + contrast + ', color: "' + blobColor + '", stroke: { width: 0, color: "black",}, guides: false, seed: "1234",}';
-
-        parsedOptions = eval("(" + options + ")");
-        svg = blobs(parsedOptions);   
-        
-        mood.innerHTML = svg;
-
+    .on('onchange', (val) => {
+        moodBlob.setComplexity(val);
         console.log("complexity slider moved, it is now " + val);
     });
 
-var gComplexity = d3
+const gComplexity = d3
     .select('div#slider-shape-picker')
     .append('svg')
     .attr('width', 375)
     .attr('height', 100)
     .append('g')
-    .attr('transform', 'translate(60,50)');
+    .attr('transform', 'translate(37.5, 50)');
 
 gComplexity.call(gComplexityPicker);
 
@@ -126,118 +134,107 @@ gComplexity.call(gComplexityPicker);
 // this controls the CONTRAST //
 ////////////////////////////////
 
-var contrastData = [0, 1];
-var gContrastPicker = d3
+const gContrastPicker = d3
     .sliderBottom()
-    .min(d3.min(contrastData))
-    .max(d3.max(contrastData))
+    .min(0)
+    .max(1)
     .width(300)
     .ticks(0)
-    .default(0.1)
+    .default(defaultContrast)
     .handle(
         d3
             .symbol()
             .type(d3.symbolCircle)
             .size(200)()
     )
-    .on('onchange', val => {
-        contrast = val;
-
-        options = '{size: ' + size + ', complexity: ' + complexity + ', contrast: ' + contrast + ', color: "' + blobColor + '", stroke: { width: 0, color: "black",}, guides: false, seed: "1234",}';
-
-        parsedOptions = eval("(" + options + ")");
-        svg = blobs(parsedOptions);   
-        
-        mood.innerHTML = svg;
-
+    .on('onchange', (val) => {
+        moodBlob.setContrast(val);
         console.log("contrast slider moved, it is now " + val);
     });
 
-var gContrast = d3
+const gContrast = d3
     .select('div#slider-shape-picker')
     .append('svg')
     .attr('width', 375)
     .attr('height', 100)
     .append('g')
-    .attr('transform', 'translate(60,50)');
+    .attr('transform', 'translate(37.5, 50)');
 
-    gContrast.call(gContrastPicker);
-
+gContrast.call(gContrastPicker);
 
 //////////////////////////////////////
 // this controls the STICKER DRAWER //
 //////////////////////////////////////
 
-interact('.draggable')
-  .draggable({
-    inertia: true,
-    autoScroll: true,
+const dragMoveListener = (event) => {
+    const target = event.target;
+    const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
+    const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
 
-    onmove: dragMoveListener,
-  });
-
-  function dragMoveListener (event) {
-    var target = event.target,
-        x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx,
-        y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
-
-    target.style.webkitTransform =
-    target.style.transform =
-      'translate(' + x + 'px, ' + y + 'px)';
+    const translate = `translate(${x}px, ${y}px)`;
+    target.style.transform = translate;
+    target.style.webkitTransform = translate;
 
     target.setAttribute('data-x', x);
     target.setAttribute('data-y', y);
-  }
+}
+
+interact('.draggable')
+    .draggable({
+        inertia: true,
+        autoScroll: true,
+        onmove: dragMoveListener,
+    });
 
 interact('.dropzone').dropzone({
     accept: '.draggable',
     overlap: 0.75,
-    
-    ondropactivate: function (event) {
-      event.target.classList.add('drop-active')
+
+    ondropactivate: (event) => {
+        event.target.classList.add('drop-active');
     },
-    ondragenter: function (event) {
-      var draggableElement = event.relatedTarget;
-      var dropzoneElement = event.target;
-  
-      dropzoneElement.classList.add('drop-target')
-      draggableElement.classList.add('can-drop')
+    ondragenter: (event) => {
+        const draggableElement = event.relatedTarget;
+        const dropzoneElement = event.target;
+
+        dropzoneElement.classList.add('drop-target');
+        draggableElement.classList.add('can-drop');
     },
-    ondragleave: function (event) {
-      event.target.classList.remove('drop-target')
-      event.relatedTarget.classList.remove('can-drop')
+    ondragleave: (event) => {
+        event.target.classList.remove('drop-target');
+        event.relatedTarget.classList.remove('can-drop');
     },
-    ondropdeactivate: function (event) {
-      event.target.classList.remove('drop-active')
-      event.target.classList.remove('drop-target')
-    }
-  });
-  
-  interact('.drag-drop')
+    ondropdeactivate: (event) => {
+        event.target.classList.remove('drop-active');
+        event.target.classList.remove('drop-target');
+    },
+});
+
+interact('.drag-drop')
     .draggable({
-      inertia: true,
-      modifiers: [
-        interact.modifiers.restrict({
-          restriction: "parent",
-          endOnly: true,
-          elementRect: { top: 0, left: 0, bottom: 1, right: 1 }
-        })
-      ],
-      autoScroll: true,
-      onmove: dragMoveListener
+        inertia: true,
+        modifiers: [
+            interact.modifiers.restrict({
+                restriction: "parent",
+                endOnly: true,
+                elementRect: { top: 0, left: 0, bottom: 1, right: 1 }
+            }),
+        ],
+        autoScroll: true,
+        onmove: dragMoveListener,
     });
 
 //////////////////////////////////////////
 // this controls the NAVIGATION BUTTONS //
 //////////////////////////////////////////
 
-var navColor = document.getElementById('color');
-var navShape = document.getElementById('shape');
-var navSticker = document.getElementById('sticker');
+const navColor = document.getElementById('color');
+const navShape = document.getElementById('shape');
+const navSticker = document.getElementById('sticker');
 
-var colorSlider = document.getElementById('slider-color-picker');
-var shapeSlider = document.getElementById('slider-shape-picker');
-var stickerDrawer = document.getElementById('sticker-picker');
+const colorSlider = document.getElementById('slider-color-picker');
+const shapeSlider = document.getElementById('slider-shape-picker');
+const stickerDrawer = document.getElementById('sticker-picker');
 
 navShape.addEventListener("click", () => {
     if (navColor.style.display === "none") {
@@ -259,7 +256,6 @@ navShape.addEventListener("click", () => {
     };
 
     console.log("shape icon was clicked");
-    
 });
 
 navColor.addEventListener("click", () => {
@@ -282,7 +278,6 @@ navColor.addEventListener("click", () => {
     };
 
     console.log("color icon was clicked");
-    
 });
 
 navSticker.addEventListener("click", () => {
@@ -305,5 +300,4 @@ navSticker.addEventListener("click", () => {
     };
 
     console.log("sticker icon was clicked");
-    
 });
